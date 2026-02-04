@@ -160,6 +160,14 @@ def sentence_segment(text: str) -> List[str]:
                 i += 1
                 continue
 
+            # If the next non-space character is lowercase, treat it as a continuation (e.g., "kv. metr")
+            j = i + 1
+            while j < n and text[j].isspace():
+                j += 1
+            if j < n and text[j].islower():
+                i += 1
+                continue
+
             if i + 1 < n and text[i + 1] in QUOTE_CLOSE:
                 i += 1
                 continue

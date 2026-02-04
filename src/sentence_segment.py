@@ -7,27 +7,39 @@ import argparse
 from pathlib import Path
 import pandas as pd
 
-# Common abbreviations (extend if needed)
+# ----------------------------
+# Quote characters (robust)
+# ----------------------------
+QUOTE_OPEN = set(['"', "'", "“", "«", "‹", "„", "‘", "‚", "「", "『", "（", "(", "[", "{"])
+QUOTE_CLOSE = set(['"', "'", "”", "»", "›", "‟", "’", "‛", "」", "』", "）", ")", "]", "}"])
+
+# ----------------------------
+# Abbreviations (normalize)
+# Merge domain-specific abbreviations from both implementations
+# ----------------------------
 ABBREVIATIONS = {
-    "dr", "prof", "mr", "mrs", "ms", "t.k", "beyləqan", "azərbaycan", "ünvan", "cən", "m", "s", "ş", "b.k.",
-    "q.k", "akademiya", "şirkət", "futbolçu", "nömrə",  # Add abbreviations as you spot them
+    "dr", "mr", "mrs", "ms", "prof", "etc", "e.g", "i.e",
+    "a.m", "s.a", "b.c", "m.a", "ph.d", "u.s",
+    "t.k", "beyləqan", "azərbaycan", "ünvan", "cən", "m", "s", "ş", "b.k.",
+    "q.k", "akademiya", "şirkət", "futbolçu", "nömrə"
 }
 
-# Regex patterns
-SENT_END_RE = re.compile(r"[.!?]+")
+SENT_END = {".", "!", "?"}
 DECIMAL_RE = re.compile(r"\d+[.,]\d+")
 INITIALS_RE = re.compile(r"(?:\b\p{L}\.){2,}$", re.UNICODE)
 CATEGORY_GARBAGE_RE = re.compile(
     r"""
-    (?im)                             # case-insensitive, multiline
-    ^\s*(kateqoriya|istinadlar|qeydlər|əlavə ədəbiyyat)\b.*$  # lines that start with Kateqoriya...
+    (?im)
+    ^\s*(kateqoriya|istinadlar|qeydlər|əlavə ədəbiyyat)\b.*$
     """,
     re.VERBOSE,
 )
 
 def is_abbreviation(token: str) -> bool:
-    token = token.lower().strip(".")
-    return token in ABBREVIATIONS
+    tok = token.strip()
+    tok = tok.strip("".join(QUOTE_OPEN | QUOTE_CLOSE))
+    tok = tok.rstrip(".,!?;:")
+    return tok.lower() in ABBREVIATIONS
 
 def strip_wiki_garbage(text: str) -> str:
     # Remove category/navigation-like lines
@@ -47,57 +59,65 @@ def sentence_segment(text: str) -> List[str]:
     sentences: List[str] = []
     start = 0
     i = 0
-    length = len(text)
 
-    # Log text length for debugging
-    print(f"Processing text of length {length}")
-
-    # Prevent empty strings from causing index errors
-    if not text.strip():  # If the text is just spaces or empty
+    text = normalize_text(strip_wiki_garbage(text))
+    n = len(text)
+    if n == 0:
         return sentences
 
-    text = strip_wiki_garbage(text)
-    text = normalize_text(text)
-
-    # Add extra check to ensure text length is valid
-    length = len(text)
-    if length == 0:
-        print("Warning: Text after cleaning is empty.")
-        return sentences
-
-    while i < length:
+    while i < n:
         ch = text[i]
-        if ch in ".!?":
-            chunk = text[start:i+1]
 
-            # Look at the token before punctuation
-            prev = chunk.rstrip().split()[-1]
+        # Closing quote + space + Uppercase => boundary
+        if ch in QUOTE_CLOSE and quote_followed_by_space_upper(text, i):
+            sent = text[start:i + 1].strip()
+            if sent:
+                sentences.append(sent)
+            start = i + 1
+            i += 1
+            continue
 
-            # Rules to avoid splitting
-            if is_abbreviation(prev):
+        if ch in SENT_END:
+            if ch == ".":
+                if is_decimal_dot_or_comma(text, i):
+                    i += 1
+                    continue
+                if is_surrounded_by_non_space(text, i):
+                    i += 1
+                    continue
+                if is_initial_period(text, i):
+                    i += 1
+                    continue
+
+            chunk = text[start:i + 1]
+            prev_token = chunk.rstrip().split()[-1] if chunk.rstrip().split() else ""
+
+            if is_abbreviation(prev_token):
                 i += 1
                 continue
-            if DECIMAL_RE.search(prev):
-                i += 1
-                continue
-            if INITIALS_RE.search(prev):
+
+            if ch == "." and is_compact_initials(prev_token):
                 i += 1
                 continue
 
-            # Accept boundary
+            if i + 1 < n and text[i + 1] in QUOTE_CLOSE:
+                i += 1
+                continue
+
             sent = chunk.strip()
             if sent:
                 sentences.append(sent)
             start = i + 1
+
+        elif ch == ":":
+            pass
+
         i += 1
 
-    # Remainder
-    rest = text[start:].strip()
-    if rest:
-        sentences.append(rest)
+    tail = text[start:].strip()
+    if tail:
+        sentences.append(tail)
 
-    # Log the result to ensure it works
-    print(f"Generated {len(sentences)} sentences.")
     return sentences
 
 

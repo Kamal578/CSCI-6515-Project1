@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import regex as re
 from typing import List
+import argparse
+from pathlib import Path
+import pandas as pd
 
 # Common abbreviations (extend if needed)
 ABBREVIATIONS = {
@@ -96,3 +99,37 @@ def sentence_segment(text: str) -> List[str]:
     # Log the result to ensure it works
     print(f"Generated {len(sentences)} sentences.")
     return sentences
+
+
+def _load_text_from_csv(corpus_path: str, limit: int | None = None) -> str:
+    df = pd.read_csv(corpus_path)
+    texts = df["text"].dropna().astype(str)
+    if limit:
+        texts = texts.head(limit)
+    return " ".join(texts.tolist())
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Sentence segmentation for Azerbaijani corpus.")
+    src = ap.add_mutually_exclusive_group(required=True)
+    src.add_argument("--text_path", type=str, help="Plain text file to segment.")
+    src.add_argument("--corpus_path", type=str, help="CSV with a 'text' column (e.g., data/raw/corpus.csv).")
+    ap.add_argument("--limit", type=int, default=None, help="Optional: limit number of rows from corpus.")
+    ap.add_argument("--out", type=str, default="outputs/sentences.txt", help="Where to write segmented sentences.")
+    args = ap.parse_args()
+
+    if args.text_path:
+        text = Path(args.text_path).read_text(encoding="utf-8")
+    else:
+        text = _load_text_from_csv(args.corpus_path, limit=args.limit)
+
+    sentences = sentence_segment(text)
+
+    out_path = Path(args.out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text("\n".join(sentences), encoding="utf-8")
+    print(f"Saved {len(sentences)} sentences to {out_path}")
+
+
+if __name__ == "__main__":
+    main()

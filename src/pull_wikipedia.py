@@ -15,6 +15,7 @@ from typing import Dict, Iterable, List, Optional, Tuple
 import requests
 from tqdm import tqdm
 import mwparserfromhell
+from .clean_corpus import clean_wiki_page
 
 
 AZWIKI_API = "https://az.wikipedia.org/w/api.php"
@@ -149,18 +150,15 @@ def fetch_pages_wikitext(titles: List[str], session: requests.Session) -> List[T
     return out
 
 
-import langid
-import re
-import mwparserfromhell
-
 def clean_wikitext_to_text(wikitext: str) -> str:
     """
-    Convert wikitext to plain text while removing templates, references, tables, files, categories, and sections.
-    Also removes English content using language detection.
+    Convert wikitext to plain-ish text and run additional cleanup.
+    - Strip templates, refs, tags via mwparserfromhell
+    - Drop file/category links and whitespace noise
+    - Apply higher-level cleaning (sections, langid filtering) from clean_corpus.clean_wiki_page
     """
     code = mwparserfromhell.parse(wikitext)
 
-    # Remove templates, tags, files, and category links
     for tpl in code.filter_templates(recursive=True):
         try:
             code.remove(tpl)
@@ -175,33 +173,13 @@ def clean_wikitext_to_text(wikitext: str) -> str:
 
     text = code.strip_code(normalize=True, collapse=True)
 
-    # Remove category links and file links
     text = re.sub(r"\[\[Kateqoriya:[^\]]+\]\]", " ", text, flags=re.IGNORECASE)
     text = re.sub(r"\[\[(Fayl|File):[^\]]+\]\]", " ", text, flags=re.IGNORECASE)
-
-    # Remove specific sections like "External Links" and "See also"
-    text = re.sub(r"(?i)^(==\s*(External links|See also|Notes|References).+?==\s*$)(.|\n)*", "", text)
-
-    # Remove leftover markup noise and multiple spaces
     text = re.sub(r"\s+", " ", text).strip()
 
-    # Filter out English-heavy sentences based on language detection
-    return remove_english_sentences(text)
-
-def remove_english_sentences(text: str, threshold: float = 0.7) -> str:
-    """
-    Removes lines where the dominant language is English based on language detection.
-    Threshold: fraction of words predicted as English
-    """
-    lines = text.splitlines()
-    result = []
-
-    for line in lines:
-        lang, score = langid.classify(line)
-        if lang == "en" and score > threshold:
-            continue
-        result.append(line)
-    return "\n".join(result)
+    # Secondary cleanup (sections, templates, langid filter, etc.)
+    text = clean_wiki_page(text)
+    return text
 
 
 

@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import List
+import argparse
+import pandas as pd
 
 from .sentence_segment import sentence_segment
 
@@ -26,10 +28,33 @@ def evaluate(predicted: List[str], gold: List[str]):
     return precision, recall, f1
 
 
+def _load_text_from_corpus(path: str, limit: int | None) -> str:
+    df = pd.read_csv(path)
+    texts = df["text"].dropna().astype(str)
+    if limit:
+        texts = texts.head(limit)
+    return " ".join(texts.tolist())
+
+
 def main():
-    text = Path("data/raw/corpus.csv").read_text(encoding="utf-8", errors="ignore")
-    predicted = sentence_segment(text)
-    gold = load_gold("data/processed/sent_gold.txt")
+    ap = argparse.ArgumentParser(description="Evaluate sentence segmentation against a gold file.")
+    ap.add_argument("--gold", type=str, default="data/processed/sent_gold.txt", help="Gold sentence-per-line file.")
+    ap.add_argument("--pred", type=str, help="Optional predicted sentence-per-line file. If omitted, segment a corpus.")
+    ap.add_argument("--corpus_path", type=str, default="data/raw/corpus.csv", help="Corpus CSV with 'text' column.")
+    ap.add_argument("--limit", type=int, default=None, help="Limit number of rows from corpus when auto-segmenting.")
+    args = ap.parse_args()
+
+    gold_path = Path(args.gold)
+    if not gold_path.exists():
+        raise FileNotFoundError(f"Gold file not found: {gold_path}. Run generate_gold_standard.py and hand-edit it.")
+
+    gold = load_gold(args.gold)
+
+    if args.pred:
+        predicted = load_gold(args.pred)
+    else:
+        text = _load_text_from_corpus(args.corpus_path, limit=args.limit)
+        predicted = sentence_segment(text)
 
     p, r, f1 = evaluate(predicted, gold)
     print(f"[Task 4] Precision={p:.3f} Recall={r:.3f} F1={f1:.3f}")

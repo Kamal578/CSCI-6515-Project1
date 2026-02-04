@@ -1,4 +1,10 @@
-# Azerbaijani Wikipedia NLP Pipeline
+# Spring 2026 Natural Language Processing (CSCI-6515)
+
+# Project 1: Azerbaijani Wikipedia Corpus and NLP Pipeline
+
+## Authors
+- Kamal Ahmadov (kahmadov24700@ada.edu.az; kamal.ahmadov@gwu.edu)
+- Rufat Guliyev (rguliyev24988@ada.edu.az; rufat.guliyev@gwu.edu)
 
 End-to-end mini-pipeline for collecting, cleaning, and exploring an Azerbaijani Wikipedia corpus. It covers tokenization, frequency stats (Zipf), Heaps' law fit, BPE, sentence segmentation, and spell checking (uniform + weighted edit distance), with reproducible scripts and report-ready outputs.
 

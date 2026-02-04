@@ -16,21 +16,25 @@ WORD_RE = re.compile(
     re.VERBOSE | re.UNICODE,
 )
 
+# src/tokenize.py (modify the existing strip_wiki_garbage function)
 CATEGORY_GARBAGE_RE = re.compile(
     r"""
     (?im)                             # case-insensitive, multiline
-    ^\s*(kateqoriya|kateqoriyalar)\b.*$  # lines that start with Kateqoriya...
+    ^\s*(kateqoriya|istinadlar|qeydlər|əlavə ədəbiyyat)\b.*$  # lines that start with Kateqoriya...
     """,
     re.VERBOSE,
 )
 
-
 def strip_wiki_garbage(text: str) -> str:
-    # remove category/navigation-like lines
+    # Remove category/navigation-like lines
     text = CATEGORY_GARBAGE_RE.sub(" ", text)
-    # also remove standalone occurrences like "Kateqoriya:" if embedded
+    # Also remove standalone occurrences like "Kateqoriya:" if embedded
     text = re.sub(r"(?i)\bkateqoriya\b\s*:\s*", " ", text)
+    text = re.sub(r"(?i)\bistinadlar\b\s*:\s*", " ", text)
+    text = re.sub(r"(?i)\bqeydlər\b\s*:\s*", " ", text)
+    text = re.sub(r"(?i)\bəlavə ədəbiyyat\b\s*:\s*", " ", text)
     return text
+
 
 def normalize_text(s: str) -> str:
     # Normalize some common Wikipedia-ish punctuation variants

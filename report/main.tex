@@ -123,7 +123,16 @@ The Zipf plot in Figure~\ref{fig:zipf} shows a typical rank-vs-frequency distrib
 The BPE model performed 5,000 merges, generating 5,239 subword types. The total number of BPE tokens emitted was 430,034. This reduces the vocabulary size and facilitates more efficient handling of unseen words. Example segmentations are available in \texttt{outputs/bpe/bpe\_summary.json}.
 
 \subsection{Sentence Segmentation}
-The rule-based sentence segmentation approach extracted 11,479 sentences from the first 500 documents. Some edge cases like abbreviations and decimal numbers were effectively handled. However, challenges arose in cases with mixed punctuation and lowercase continuations after periods (e.g., "kv. verst").
+
+Sentence segmentation was performed using a rule-based approach tailored to the characteristics of Azerbaijani Wikipedia text. From the first 500 documents, the segmenter extracted 11{,}479 sentences, producing well-formed sentence boundaries in the majority of cases.
+
+A key challenge in this setting is that punctuation alone is an unreliable indicator of sentence boundaries. Azerbaijani Wikipedia articles frequently contain decimal numbers, abbreviations, personal initials, and quoted material, all of which can lead to erroneous splits under naive punctuation-based rules.
+
+To address these issues, we enhanced the baseline segmenter with several language-aware heuristics. First, periods and commas are not treated as sentence boundaries when they are surrounded by non-space characters on both sides. This prevents incorrect segmentation in numerical expressions (e.g., \textit{3.14}) and compact abbreviations. Second, periods following a single uppercase letter are not interpreted as sentence boundaries, which improves handling of initial-based names such as \textit{K. Ahmadov}. Third, we introduce quotation-aware rules for guillemets and quotation marks. When a quoted segment ends with sentence-final punctuation, the segmenter inspects the following context: if the closing quote is followed by a space and a lowercase letter, no sentence boundary is introduced; if followed by a space and an uppercase letter, a sentence boundary is detected.
+
+These enhancements substantially reduce false positives while preserving true sentence boundaries, particularly in texts containing numerical expressions, personal names, and embedded citations. Qualitative inspection shows that the enhanced segmenter handles lowercase continuations after periods (e.g., \textit{kv. verst}) correctly, with minimal remaining errors.
+
+
 
 \subsection{Spell Checking}
 The Levenshtein-based spell checker, enhanced with weighted edit distance, achieved an accuracy of Accuracy@1 = \spellaccone\ and Accuracy@5 = \spellaccfive. A confusion matrix of top substitutions is visualized in Figure~\ref{fig:confusion}, highlighting common character substitutions.

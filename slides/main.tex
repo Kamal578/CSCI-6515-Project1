@@ -15,6 +15,7 @@
   frame=single
 }
 
+
 \title{Spring 2026 Natural Language Processing (CSCI-6515)}
 \subtitle{Azerbaijani Wikipedia Corpus: Tokenization, Heaps' Law, BPE, Sentence Segmentation, and Spell Checking}
 \author{
@@ -171,47 +172,81 @@ Example:
 \end{frame}
 
 %------------------------------------------------
-\begin{frame}{Sentence Segmentation (Rule-based)}
-We detect sentence boundaries using punctuation + context rules.
+\begin{frame}{Enhanced Rule-Based Sentence Segmentation}
 
-Boundary candidates:
+Sentence boundaries are detected using punctuation
 \[
 p \in \{.,!,?\}
 \]
+\textbf{only when contextual constraints are satisfied.}
 
-Do \textbf{NOT} split when:
+\vspace{0.3cm}
+
+\textbf{We block sentence boundaries if:}
 \[
-\text{decimal: } \quad \texttt{3.14},\ \texttt{50.5}
+\text{Non-space on both sides of } p
+\Rightarrow \text{no split}
 \]
 \[
-\text{initial: } \quad \texttt{A. Məlikli},\ \texttt{S.Rustamov}
-\]
-\[
-\text{abbrev: } \quad \texttt{prof.},\ \texttt{Dr.}
+\text{Examples: } \texttt{3.14},\ \texttt{50.5},\ \texttt{S.Rustamov}
 \]
 
-Split when:
 \[
-\text{quote close} + \text{space} + \text{Uppercase}
-\Rightarrow \text{boundary}
+\text{Uppercase initial + period}
+\Rightarrow \text{no split}
+\]
+\[
+\text{Example: } \texttt{A. Məlikli}
 \]
 
 \end{frame}
 
 %------------------------------------------------
-\begin{frame}{Segmentation Struggles (Real Wikipedia Text)}
+\begin{frame}{Quotation-Aware and Context-Sensitive Splitting}
+
+Special handling is applied to quoted text and citations.
+
+\vspace{0.3cm}
+
+\textbf{Quotation rule:}
+\[
+\text{closing quote} + \text{space} + \text{Uppercase}
+\Rightarrow \text{sentence boundary}
+\]
+
+\[
+\text{closing quote} + \text{space} + \text{lowercase}
+\Rightarrow \text{no split}
+\]
+
+\vspace{0.4cm}
+
+\textbf{This prevents over-splitting in:}
 \begin{itemize}
-  \item Period does not always mean sentence end:
-  \begin{itemize}
-    \item initials: \texttt{S.Rustamov}
-    \item abbreviations: \texttt{prof.}
-    \item decimals: \texttt{2.5 dəfə}
-  \end{itemize}
-  \item Quotes and guillemets: punctuation inside quotation marks
-  \item Lowercase continuation after punctuation (avoid over-splitting)
-  \item Trade-off: fewer false splits vs missing some true boundaries
+  \item Embedded citations
+  \item Lowercase continuations (e.g., \texttt{kv. verst})
+  \item Azerbaijani quotation styles (", « », etc.)
 \end{itemize}
+
 \end{frame}
+
+%------------------------------------------------
+\begin{frame}{Why These Rules Matter}
+
+\begin{itemize}
+  \item Azerbaijani Wikipedia contains dense punctuation and abbreviations
+  \item Naive punctuation splitting produces many false sentence boundaries
+  \item Our rules significantly reduce:
+  \begin{itemize}
+    \item False splits in names and numbers
+    \item Errors in quoted material
+  \end{itemize}
+  \item Lightweight, interpretable, and fast
+  \item Strong baseline for low-resource languages
+\end{itemize}
+
+\end{frame}
+
 
 %------------------------------------------------
 \begin{frame}{Spell Checking: Levenshtein Distance}

@@ -22,16 +22,20 @@
 
   <label for="word">Enter a word</label>
   <input type="text" id="word" placeholder="e.g., komputer" />
+  <label>
+    <input type="checkbox" id="debugToggle" />
+    Show checked variants (debug)
+  </label>
   <button id="checkBtn">Check spelling</button>
 
   <div id="results"></div>
 
   <script>
-    async function suggest(word) {
+    async function suggest(word, debug) {
       const res = await fetch('/api/suggest', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({word})
+        body: JSON.stringify({word, debug: debug ? 1 : 0})
       });
       if (!res.ok) {
         const t = await res.text();
@@ -43,20 +47,34 @@
     const input = document.getElementById('word');
     const btn = document.getElementById('checkBtn');
     const results = document.getElementById('results');
+    const debugToggle = document.getElementById('debugToggle');
 
     btn.addEventListener('click', async () => {
       const word = input.value.trim();
       if (!word) return;
       results.textContent = 'Loading...';
       try {
-        const data = await suggest(word);
+        const data = await suggest(word, debugToggle.checked);
         if (!data.candidates.length) {
           results.innerHTML = `<p>No suggestions found (vocab size: ${data.vocab_size}).</p>`;
           return;
         }
+        let debugHtml = '';
+        if (data.debug && data.debug.checked_candidates) {
+          const items = data.debug.checked_candidates
+            .map(c => `<div class="cand"><strong>${c.candidate}</strong> <span class="small">${c.count_returned} results</span></div>`)
+            .join('');
+          debugHtml = `
+            <details style="margin-top: 12px;">
+              <summary>Checked variants</summary>
+              ${items || '<div class="small">No variants checked.</div>'}
+            </details>
+          `;
+        }
         results.innerHTML = `
           <p class="small">Vocab: ${data.vocab_size} | Weighted: ${data.used_confusion}</p>
           ${data.candidates.map(c => `<div class="cand"><strong>${c.token}</strong> <span class="small">freq=${c.freq}</span></div>`).join('')}
+          ${debugHtml}
         `;
       } catch (err) {
         results.textContent = 'Error: ' + err.message;

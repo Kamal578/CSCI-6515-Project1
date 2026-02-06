@@ -65,8 +65,8 @@ logs/
 # ===============================
 # Spellchecker / BPE artifacts
 # ===============================
-outputs/bpe/
-outputs/spellcheck/
+# outputs/bpe/
+# outputs/spellcheck/
 
 # ===============================
 # Reports (optional)

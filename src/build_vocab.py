@@ -11,7 +11,9 @@ import pandas as pd
 from .tokenize import iter_tokens
 
 
-WORD_CHARS_RE = re.compile(r"^[\p{L}]+$", re.UNICODE)
+# Azerbaijani alphabet (lowercase + uppercase); allow only these letters
+AZ_ALPHABET = "abcçdeəfgğhxıijkqlmnoöpprsşt tuüvyzABCÇDEƏFGĞHXIİJKQLMNOÖPPRSŞTTUÜVYZ".replace(" ", "")
+AZ_RE = re.compile(rf"^[{AZ_ALPHABET}]+$")
 
 
 def count_tokens(corpus_path: str, lowercase: bool = True) -> Counter:
@@ -35,7 +37,7 @@ def filter_counts(
             continue
         if len(w) < min_len:
             continue
-        if alpha_only and not WORD_CHARS_RE.match(w):
+        if alpha_only and not AZ_RE.match(w):
             continue
         out[w] = c
     return out
